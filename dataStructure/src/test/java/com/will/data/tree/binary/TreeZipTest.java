@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 import org.junit.Test;
 
@@ -18,23 +17,24 @@ public class TreeZipTest
 	public void testBuildHuffman()
 	{
 		HuffmanTreeNode nodeA = null;
-		Random random = new Random();
-		HuffmanTreeNode[] sortedArray = new HuffmanTreeNode[10];
-		for(int i = 0; i < 10; i++)
+		int[] values = new int[]{5, 15, 40, 30, 10};
+		HuffmanTreeNode[] sortedArray = new HuffmanTreeNode[values.length];
+		for(int i = 0; i < values.length; i++)
 		{
-			nodeA = new HuffmanTreeNode(new String("" + (char)(i + 'A')), random.nextInt(100));
+			nodeA = new HuffmanTreeNode(new String("" + (char)(i + 'A')), values[i]);
 			sortedArray[i] = nodeA;
 		}
-		Arrays.sort(sortedArray, new Comparator<HuffmanTreeNode>()
-				{
+		Comparator<HuffmanTreeNode> comparator =  new Comparator<HuffmanTreeNode>()
+		{
 
-					public int compare(HuffmanTreeNode o1, HuffmanTreeNode o2)
-					{
-						return o1.getWeight() - o2.getWeight();
-					}
-			
-				});
-		LinkedBinaryTree<HuffmanTreeNode> tree = TreeZip.buildHuffmanTree(sortedArray);
+			public int compare(HuffmanTreeNode o1, HuffmanTreeNode o2)
+			{
+				return o1.getWeight() - o2.getWeight();
+			}
+	
+		};
+		Arrays.sort(sortedArray, comparator);
+		LinkedBinaryTree<HuffmanTreeNode> tree = TreeZip.buildHuffmanTree(sortedArray, comparator);
 		List<Node<HuffmanTreeNode>> nodes = new LinkedList<Node<HuffmanTreeNode>>();
 		nodes.add(tree.getRoot());
 		
@@ -50,11 +50,13 @@ public class TreeZipTest
 				{
 					sb.append(",");
 				}
-				sb.append(currentNode.getValue().getValue());
+				sb.append(currentNode.getValue().getValue()).append("(")
+					.append(currentNode.getValue().getWeight()).append(")");
 				
 				currentNode = tree.getLeftChild(currentNode);
 				if(currentNode != null)
 				{
+					sb.append("*");
 					nodes.add(currentNode);
 					currentNode = tree.getRightSibling(currentNode);
 					if(currentNode != null)
