@@ -2,9 +2,13 @@ package com.will.data.tree.binary;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.will.data.tree.Node;
@@ -13,27 +17,35 @@ import com.will.data.tree.binary.TreeZip.HuffmanTreeNode;
 public class TreeZipTest
 {
 
+	Comparator<HuffmanTreeNode> comparator =  new Comparator<HuffmanTreeNode>()
+	{
+
+		public int compare(HuffmanTreeNode o1, HuffmanTreeNode o2)
+		{
+			return o1.getWeight() - o2.getWeight();
+		}
+
+	};
+	
+	@Test
+	public void testGetCode()
+	{
+		HuffmanTreeNode[] sortedArray = getTestData();
+		LinkedBinaryTree<HuffmanTreeNode> tree = TreeZip.buildHuffmanTree(sortedArray, comparator);
+		Map<Character, byte[]> codes = TreeZip.getHuffmanCode(tree);
+		Iterator<Entry<Character, byte[]>> iter = codes.entrySet().iterator();
+		Entry<Character, byte[]> entry = null;
+		while(iter.hasNext())
+		{
+			entry = iter.next();
+			System.out.println(entry.getKey() + Arrays.toString(entry.getValue()));
+		}
+	}
+		
 	@Test
 	public void testBuildHuffman()
 	{
-		HuffmanTreeNode nodeA = null;
-		int[] values = new int[]{5, 15, 40, 30, 10};
-		HuffmanTreeNode[] sortedArray = new HuffmanTreeNode[values.length];
-		for(int i = 0; i < values.length; i++)
-		{
-			nodeA = new HuffmanTreeNode(new String("" + (char)(i + 'A')), values[i]);
-			sortedArray[i] = nodeA;
-		}
-		Comparator<HuffmanTreeNode> comparator =  new Comparator<HuffmanTreeNode>()
-		{
-
-			public int compare(HuffmanTreeNode o1, HuffmanTreeNode o2)
-			{
-				return o1.getWeight() - o2.getWeight();
-			}
-	
-		};
-		Arrays.sort(sortedArray, comparator);
+		HuffmanTreeNode[] sortedArray = getTestData();
 		LinkedBinaryTree<HuffmanTreeNode> tree = TreeZip.buildHuffmanTree(sortedArray, comparator);
 		List<Node<HuffmanTreeNode>> nodes = new LinkedList<Node<HuffmanTreeNode>>();
 		nodes.add(tree.getRoot());
@@ -68,5 +80,19 @@ public class TreeZipTest
 			sb.append("]");
 			System.out.println(sb.toString());
 		}
+	}
+	
+	private HuffmanTreeNode[] getTestData()
+	{
+		HuffmanTreeNode nodeA = null;
+		int[] values = new int[]{5, 15, 40, 30, 10};
+		HuffmanTreeNode[] sortedArray = new HuffmanTreeNode[values.length];
+		for(int i = 0; i < values.length; i++)
+		{
+			nodeA = new HuffmanTreeNode(new String("" + (char)(i + 'A')), values[i]);
+			sortedArray[i] = nodeA;
+		}
+		Arrays.sort(sortedArray, comparator);
+		return sortedArray;
 	}
 }
