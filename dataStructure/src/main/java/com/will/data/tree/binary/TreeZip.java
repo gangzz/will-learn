@@ -1,5 +1,16 @@
 package com.will.data.tree.binary;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.io.IOUtils;
+
 import com.will.data.tree.Node;
 
 public class TreeZip
@@ -18,6 +31,24 @@ public class TreeZip
 	private static String constantId = "huffman";
 	
 	private static String constantValue = "#%s";
+	
+	static final String TempFileSuffix = ".wmp";
+	
+	public static void toZip(InputStream ins, OutputStream outs)
+	{
+		Reader reader = new InputStreamReader(ins);
+		
+		toZip(reader, outs);
+		
+	}
+	
+	public static void toZip(Reader reader, OutputStream outs)
+	{
+		
+		ToZipProcess toZipProcess = new ToZipProcess(reader, outs);
+		toZipProcess.toZip();
+	}
+	
 	
 	/**
 	 * left is zero and right child is one

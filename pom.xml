@@ -8,6 +8,7 @@
 	
 	<properties>
 		<junit.version>4.11</junit.version>
+		<commons.io>2.4</commons.io>
 	</properties>
 
 	<modules>
@@ -20,6 +21,11 @@
 				<groupId>junit</groupId>
 				<artifactId>junit</artifactId>
 				<version>${junit.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>${commons.io}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
