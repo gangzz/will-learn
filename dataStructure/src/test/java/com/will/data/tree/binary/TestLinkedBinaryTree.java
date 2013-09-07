@@ -84,11 +84,11 @@ public class TestLinkedBinaryTree
 		}
 		tree = new LinkedBinaryTree<String>("TEst");
 		
-		TraversalInvoker invoker = new TraversalInvoker()
+		TraversalInvoker<Object> invoker = new TraversalInvoker<Object>()
 		{
 
 			@Override
-			public boolean invoke(BinaryNode<?> node)
+			public boolean invoke(BinaryNode<Object> node)
 			{
 				node.setRightSibling(null);
 				node.setLeftChild(null);

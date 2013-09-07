@@ -144,6 +144,13 @@ public class LinkedBinaryTree<T> implements IBinaryTree<T>
 		}
 		return array == null ? null : Arrays.asList(array);
 	}
+	
+	public int size()
+	{
+		SizeInvoker invoker = new SizeInvoker();
+		inorderTraverse(root, invoker);
+		return invoker.getSize();
+	}
 
 	void destorySubTree(BinaryNode<T> root)
 	{
@@ -173,7 +180,7 @@ public class LinkedBinaryTree<T> implements IBinaryTree<T>
 		traverse(node, new int[]{0, 1, 2}, invoker);
 	}
 	
-	void postorderTraverse(BinaryNode<T> node, TraversalInvoker invoker)
+	void postorderTraverse(BinaryNode<T> node, TraversalInvoker<?> invoker)
 	{
 		traverse(node, new int[]{1, 2, 0}, invoker);
 	}
@@ -215,6 +222,22 @@ public class LinkedBinaryTree<T> implements IBinaryTree<T>
 		private static final int LEFT = 1;
 		private static final int RIGHT = 2;
 		public abstract int[] getOrders();
+	}
+	
+	private class SizeInvoker extends TraversalInvoker<Object>{
+		int size = 0;
+		@Override
+		public boolean invoke(BinaryNode<Object> node)
+		{
+			size ++;
+			return true;
+		}
+		
+		public int getSize()
+		{
+			return size;
+		}
+		
 	}
 
 }

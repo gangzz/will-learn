@@ -12,16 +12,19 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.IOUtils;
 
 import com.will.data.tree.binary.TreeZip.HuffmanTreeNode;
+import com.will.data.tree.binary.model.CodeEntry;
 
 /**
  * 负责一个压缩的流程实体
@@ -35,6 +38,8 @@ public class ToZipProcess
 	private Reader buffReader = null;
 	private OutputStream outs = null;
 	char[] cbuffer = new char[4096];
+	private static final byte ConstantHead = 15;
+	
 	private static Comparator<HuffmanTreeNode> comparator = new Comparator<HuffmanTreeNode>()
 	{
 
@@ -64,7 +69,7 @@ public class ToZipProcess
 			HuffmanTreeNode[] sortedArray = generateCharWeightList();
 			Arrays.sort(sortedArray, comparator);
 			LinkedBinaryTree<HuffmanTreeNode> tree = TreeZip.buildHuffmanTree(sortedArray, comparator);
-			Map<Character, byte[]> codes = TreeZip.getHuffmanCode(tree);
+			Map<Character, CodeEntry> codes = TreeZip.getHuffmanCode(tree);
 			outputTree(tree);
 			outputZipFile(codes);
 			clearTempFiles();
@@ -82,34 +87,82 @@ public class ToZipProcess
 	 */
 	private void outputTree(LinkedBinaryTree<HuffmanTreeNode>  tree)
 	{
-		
+		try
+		{
+			outs.write(ConstantHead);
+			int length = tree.size();
+			outs.write(TreeZip.intToByte(length));
+			OutputTreeInvoker invoker = new OutputTreeInvoker();
+			tree.postorderTraverse((BinaryNode)tree.getRoot(), invoker);
+			List<int[]> datas = invoker.getData();
+			for(int[] data : datas)
+			{
+				for(int num : data)
+				{
+					outs.write(TreeZip.intToByte(num));
+				}
+			}
+		} catch (IOException e)
+		{
+			throw new RuntimeException("Output Tree faild.", e);
+		}
 	}
 	
 	/**
 	 * 根据最终生成的字符码对照表输出
 	 * @param codes
 	 */
-	private void outputZipFile(Map<Character, byte[]> codes)
+	private void outputZipFile(Map<Character, CodeEntry> codes)
 	{
 		try
 		{
 			int bufferLength = buffReader.read(cbuffer);
-			byte[] code = null;
+			CodeEntry code = null;
 			
 			while(bufferLength > 0)
 			{
 				
 				for(int i =0; i < bufferLength; i++)
 				{
-					code = codes.get(i);
+					code = codes.get(cbuffer[i]);
 					
 					//TODO 预读、快捷表
-					outs.write(code);
+					mergeAndOutput(code);
 				}
+				bufferLength = buffReader.read(cbuffer);
+			}
+			if(leftLength > 0)
+			{
+				outs.write(TreeZip.bitToByte(mergingByte));
 			}
 		} catch (IOException e)
 		{
 			throw new RuntimeException("ZipFile write faild.", e);
+		}
+	}
+	
+	/**
+	 * 融合并输出
+	 * @param code
+	 */
+	private int leftLength = 8;
+	private boolean[] mergingByte = new boolean[8];
+	private void mergeAndOutput(CodeEntry code) throws IOException
+	{
+		int codeLeftLength = code.getLength();
+		int moveLength = 0;
+		for(int i = 0; i < code.getLength(); i += moveLength)
+		{
+			moveLength = (leftLength > codeLeftLength) ? codeLeftLength : leftLength;
+			System.arraycopy(code.getCode(), i, mergingByte, (8 - leftLength), moveLength);
+			codeLeftLength -= moveLength; 
+			leftLength -= moveLength;
+			if(leftLength == 0)
+			{
+				outs.write(TreeZip.bitToByte(mergingByte));
+				mergingByte = new boolean[8];
+				leftLength = 8;
+			}
 		}
 	}
 	
@@ -125,25 +178,15 @@ public class ToZipProcess
 		try
 		{
 			
-			if(buffReader.markSupported())
-			{
-				buffReader.mark(Integer.MAX_VALUE);
-			}
-			else
-			{
-				tempFiles = File.createTempFile(null, TreeZip.TempFileSuffix);
-				FileWriter fwriter = new FileWriter(tempFiles);
-				tempWriter = new BufferedWriter(fwriter);
-			}
+			tempFiles = File.createTempFile("wtemp", TreeZip.TempFileSuffix);
+			FileWriter fwriter = new FileWriter(tempFiles);
+			tempWriter = new BufferedWriter(fwriter);
 			
 			int readLength = buffReader.read(cbuffer);
 			while(readLength > 0)
 			{
 				markReader(counter, cbuffer, readLength);
-				if(!buffReader.markSupported())
-				{
-					tempWriter.write(cbuffer, 0, readLength);
-				}
+				tempWriter.write(cbuffer, 0, readLength);
 				readLength = buffReader.read(cbuffer);
 			}
 		}
@@ -155,15 +198,10 @@ public class ToZipProcess
 		{
 			try
 			{
-				if(buffReader.markSupported())
-				{
-					buffReader.reset();
-				}
-				else
-				{
-					IOUtils.closeQuietly(buffReader);
-					buffReader = new BufferedReader(new FileReader(tempFiles));
-				}
+				
+				IOUtils.closeQuietly(buffReader);
+				buffReader = new BufferedReader(new FileReader(tempFiles));
+				
 			}
 			catch(IOException e)
 			{
@@ -213,37 +251,61 @@ public class ToZipProcess
 	
 	public static void main(String[] args)
 	{
-//		ByteArrayOutputStream os = new ByteArrayOutputStream();
-//		Writer writer = new OutputStreamWriter(os);
-//		try
-//		{
-//			writer.write(new char[]{'B','国'});
-//			writer.flush();
-//			System.out.println(os.size());
-//		} catch (IOException e)
-//		{
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		boolean one = true;
-		boolean zero = false;
-		boolean[] values = new boolean[]{one, zero, one};
-		System.out.println(toByte(values));
+		ByteArrayOutputStream os = new ByteArrayOutputStream();
+		Writer writer = new OutputStreamWriter(os);
+		try
+		{
+//			writer.write(Integer.MAX_VALUE);
+			os.write(255);
+			writer.flush();
+			byte[] array = os.toByteArray();
+			System.out.println(os.size());
+			System.out.println(Arrays.toString(array));
+		} catch (IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 	
-	private static byte toByte(boolean[] values)
+	private class OutputTreeInvoker extends TraversalInvoker<HuffmanTreeNode>
 	{
-		boolean b = false;
-		byte value = 0, constant = 1;
-		for(int i = 0; i < values.length ; i++)
+
+		Map<String, Integer> positions = new HashMap<String, Integer>();
+		List<int[]> nodes = new ArrayList<int[]>();
+		int position = 0;
+		
+		@Override
+		public boolean invoke(BinaryNode<HuffmanTreeNode> node)
 		{
-			b = values[i];
-			if(b)
+			int[] data = new int[3];
+			HuffmanTreeNode nodeValue = node.getValue();
+			String value = nodeValue.getValue();
+			int leftPosition = -1, rightPosition = -1;
+			BinaryNode<HuffmanTreeNode> leftNode = node.getLeftChild(), rightNode = null;
+			if(leftNode != null)
 			{
-				value = (byte)(value | (constant << (values.length - i - 1)));
+				rightNode = leftNode.getRightSibling();
+				leftPosition = positions.get(leftNode.getValue().getValue());
+				if(rightNode != null)
+				{
+					rightPosition = positions.get(rightNode.getValue().getValue());
+				}
 			}
+			data[0] = value.length() > 1 ? '#' : value.charAt(0);
+			data[1] = leftPosition;
+			data[2] = rightPosition;
+			nodes.add(data);
+			positions.put(value, position);
+			position ++;
+				
+			return true;
 		}
-		return value;
+		
+		public List<int[]> getData()
+		{
+			return nodes;
+		}
+		
 	}
 	
 }

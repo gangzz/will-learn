@@ -17,5 +17,7 @@ public interface ITree<T>
 	public void deleteNode(Node<T> node);
 	
 	public void destory();
+	
+	public int size();
 
 }
